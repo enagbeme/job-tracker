@@ -1,0 +1,35 @@
+{
+  "family": "job-tracker",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::670694288025:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "job-tracker",
+      "image": "670694288025.dkr.ecr.us-east-2.amazonaws.com/job-tracker:latest",
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "DATABASE_URL",
+          "value": "sqlite:///./job_tracker.db"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/job-tracker",
+          "awslogs-region": "us-east-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "essential": true
+    }
+  ]
+}
