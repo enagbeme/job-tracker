@@ -1,25 +1,44 @@
-# Job Application Tracker - Full-Stack App on EC2 + RDS
+# Job Application Tracker — Docker + ECS Fargate + CI/CD
 
-A production-grade job application tracking web app built with Python FastAPI, deployed on an AWS EC2 instance with a managed RDS PostgreSQL database. Features a modern dark-themed dashboard with analytics charts, kanban board, table view, search, filtering, and CSV export.
+A production-grade job application tracking web app built with Python FastAPI. Originally deployed on EC2 + RDS, then containerized with Docker and migrated to ECS Fargate with a fully automated GitHub Actions CI/CD pipeline.
 
 ## Live Demo
 
-**http://3.16.124.86:8000**
+**http://3.144.48.59:8000**
 
 ## Architecture
+
+### Current: Containerized on ECS Fargate with CI/CD
+
+```
+┌──────────────┐       ┌──────────────────┐       ┌──────────────┐
+│   Developer  │       │  GitHub Actions   │       │  Amazon ECR  │
+│   git push   │──────▶│  (CI/CD Pipeline) │──────▶│  (Registry)  │
+└──────────────┘       └────────┬─────────┘       └──────┬───────┘
+                                │                        │
+                                │  Deploy                │  Pull image
+                                ▼                        ▼
+                       ┌─────────────────────────────────────────┐
+                       │           Amazon ECS Fargate            │
+                       │  ┌───────────────────────────────────┐  │
+                       │  │  job-tracker container            │  │
+                       │  │  Python 3.11 + FastAPI + Uvicorn  │  │
+                       │  │  Port 8000                        │  │
+                       │  └───────────────────────────────────┘  │
+                       └─────────────────────────────────────────┘
+```
+
+### Previous: EC2 + RDS (manual deployment)
 
 ```
                                      Private VPC
                               ┌─────────────────────────┐
-                              │                         │
 ┌──────────┐   Port 8000      │  ┌──────────────────┐   │   Port 5432    ┌──────────────────┐
 │  Browser │ ────────────────▶│  │   EC2 Instance   │───│──────────────▶│  RDS PostgreSQL  │
 │  (User)  │                  │  │   t2.micro        │   │               │  db.t4g.micro    │
-│          │◀────────────────│  │   Amazon Linux    │◀──│───────────────│  jobtracker db   │
-└──────────┘                  │  │   FastAPI+Uvicorn │   │               └──────────────────┘
-                              │  │   systemd service │   │                  No public access
+│          │◀────────────────│  │   FastAPI+Uvicorn │◀──│───────────────│  jobtracker db   │
+└──────────┘                  │  │   systemd service │   │               └──────────────────┘
                               │  └──────────────────┘   │
-                              │                         │
                               └─────────────────────────┘
 ```
 
@@ -27,36 +46,50 @@ A production-grade job application tracking web app built with Python FastAPI, d
 
 | Service | Purpose |
 |---------|---------|
-| **Amazon EC2** | Virtual Linux server (t2.micro) running the FastAPI application |
+| **Amazon ECS (Fargate)** | Serverless container orchestration — runs the Docker container without managing servers |
+| **Amazon ECR** | Private Docker registry to store container images |
+| **Amazon EC2** | Original deployment target (t2.micro, Amazon Linux 2023) |
 | **Amazon RDS** | Managed PostgreSQL database (db.t4g.micro) with automated backups |
-| **VPC** | Private network containing both EC2 and RDS for secure communication |
-| **Security Groups** | Firewall rules controlling access to EC2 (ports 22, 8000) and RDS (port 5432) |
+| **VPC** | Private network for secure EC2 ↔ RDS communication |
+| **Security Groups** | Firewall rules controlling access to ECS, EC2, and RDS |
+| **CloudWatch** | Container logs and monitoring for ECS tasks |
+| **IAM** | Task execution role with least-privilege permissions for ECS |
 
 ## Key Concepts Demonstrated
 
-### EC2 Instance Management
-- Launched an Amazon Linux 2023 instance with a `.pem` key pair for SSH access
-- Installed Python, cloned the application from GitHub, configured environment variables
+### Docker Containerization
+- Created a multi-layer `Dockerfile` with dependency caching — `requirements.txt` is copied and installed before app code, so rebuilds only reinstall packages when dependencies change
+- Used `python:3.11-slim` base image to minimize container size
+- Added `.dockerignore` to exclude unnecessary files (`.git`, `*.db`, `.env`) from the image
+- Built and tested the container locally before pushing to AWS
+
+### ECS Fargate (Serverless Containers)
+- Created an ECS cluster and Fargate service — no EC2 instances to manage
+- Defined a task definition specifying container image, CPU (0.25 vCPU), memory (512MB), and port mappings
+- Configured the service to maintain exactly 1 running task with automatic restarts on failure
+- Assigned a public IP for direct access without a load balancer
+
+### CI/CD with GitHub Actions
+- Built a fully automated deployment pipeline triggered on every push to `main`
+- Pipeline steps: checkout code → authenticate with AWS → login to ECR → build Docker image → push to ECR → update ECS task definition → deploy to ECS → wait for service stability
+- Used official AWS GitHub Actions (`configure-aws-credentials`, `amazon-ecr-login`, `amazon-ecs-render-task-definition`, `amazon-ecs-deploy-task-definition`)
+- Stored AWS credentials as GitHub repository secrets — never hardcoded
+
+### ECR (Elastic Container Registry)
+- Created a private repository to store Docker images
+- Images are tagged with both `latest` and the git commit SHA for traceability
+- ECR is in the same region as ECS for fast image pulls
+
+### EC2 + RDS (Original Deployment)
+- Launched an Amazon Linux 2023 instance with SSH key pair access
 - Set up the app as a **systemd service** for persistent execution — auto-restarts on failure and survives reboots
-- Configured security group to allow SSH (port 22) from my IP only, and HTTP (port 8000) from anywhere
+- Created a PostgreSQL database on RDS with **no public access** — only reachable from within the VPC
+- Configured security groups so RDS only accepts traffic from the EC2 security group (least privilege)
 
-### RDS Managed Database
-- Created a PostgreSQL database on the free tier (db.t4g.micro)
-- RDS handles backups, patching, and availability automatically
-- Set **Public Access to No** — the database is only reachable from within the VPC
-- Created an initial database (`jobtracker`) during setup
-- Connected from EC2 using the RDS endpoint with SSL (`sslmode=require`)
-
-### Security Groups as Firewalls
-- **EC2 Security Group** (`job-tracker-sg`):
-  - Inbound: Port 22 (SSH) from my IP, Port 8000 (HTTP) from 0.0.0.0/0
-- **RDS Security Group** (`default`):
-  - Inbound: Port 5432 (PostgreSQL) from `job-tracker-sg` only
-- This ensures the database is **never exposed to the internet** — only the EC2 instance can connect
-
-### Deployment Pipeline
+### Deployment Evolution
 ```
-Local development → Git push → SSH into EC2 → Git clone → Install deps → Configure env → systemd start
+Manual:     Code → git push → SSH into EC2 → git pull → restart systemd
+Automated:  Code → git push → GitHub Actions → Docker build → ECR → ECS (zero touch)
 ```
 
 ## Application Features
@@ -86,31 +119,38 @@ Local development → Git push → SSH into EC2 → Git clone → Install deps �
 | **Backend** | Python 3.11, FastAPI, SQLAlchemy ORM |
 | **Frontend** | Jinja2 templates, vanilla CSS (glassmorphism design), vanilla JS |
 | **Database** | PostgreSQL (RDS) / SQLite (local development) |
-| **Server** | Uvicorn ASGI server, systemd service manager |
+| **Container** | Docker, Amazon ECR |
+| **Orchestration** | Amazon ECS Fargate |
+| **CI/CD** | GitHub Actions |
+| **Server** | Uvicorn ASGI server |
 
 ## Project Structure
 
 ```
 job-tracker/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml           # GitHub Actions CI/CD pipeline
 ├── app/
 │   ├── __init__.py
-│   ├── main.py              # FastAPI routes and application logic
-│   ├── models.py            # SQLAlchemy models (JobApplication)
-│   ├── database.py          # Database connection and session management
-│   ├── job_fetcher.py       # Auto-fetch jobs from free APIs
+│   ├── main.py                  # FastAPI routes and application logic
+│   ├── models.py                # SQLAlchemy models (JobApplication)
+│   ├── database.py              # Database connection and session management
 │   ├── static/
 │   │   ├── css/
-│   │   │   └── style.css    # Dark theme with glassmorphism, charts, kanban
+│   │   │   └── style.css        # Dark theme with glassmorphism, charts, kanban
 │   │   └── js/
-│   │       └── main.js      # Animated counters, chart animations, keyboard shortcuts
+│   │       └── main.js          # Animated counters, chart animations, keyboard shortcuts
 │   └── templates/
-│       ├── base.html         # Base layout with sidebar navigation
-│       ├── dashboard.html    # Dashboard with stats, charts, table/kanban views
-│       ├── add.html          # Add new application form
-│       └── edit.html         # Edit existing application form
-├── requirements.txt          # Python dependencies
-├── run.py                    # Local development server launcher
-├── fetch_daily.py            # Standalone script for daily job fetching (cron)
+│       ├── base.html            # Base layout with sidebar navigation
+│       ├── dashboard.html       # Dashboard with stats, charts, table/kanban views
+│       ├── add.html             # Add new application form
+│       └── edit.html            # Edit existing application form
+├── Dockerfile                   # Container build instructions
+├── .dockerignore                # Files excluded from Docker image
+├── task-definition.json         # ECS Fargate task configuration
+├── requirements.txt             # Python dependencies
+├── run.py                       # Local development server launcher
 └── README.md
 ```
 
@@ -121,50 +161,65 @@ job-tracker/
 git clone https://github.com/enagbeme/job-tracker.git
 cd job-tracker
 
-# Install dependencies
-pip install -r requirements.txt
+# Run with Docker
+docker build -t job-tracker .
+docker run -p 8000:8000 job-tracker
 
-# Run locally (uses SQLite)
+# Or run without Docker
+pip install -r requirements.txt
 python run.py
 
 # Open http://localhost:8000
 ```
 
-## AWS Deployment
+## AWS Deployment (ECS Fargate)
 
-### 1. Create RDS PostgreSQL
-- Engine: PostgreSQL (free tier, db.t4g.micro)
-- Initial database name: `jobtracker`
-- Public access: No
-
-### 2. Launch EC2 Instance
-- AMI: Amazon Linux 2023
-- Instance type: t2.micro (free tier)
-- Security group: SSH (port 22, my IP) + HTTP (port 8000, anywhere)
-
-### 3. Allow EC2 → RDS Connection
-- Add inbound rule to RDS security group: PostgreSQL (5432) from EC2 security group
-
-### 4. Deploy the App
+### 1. Create ECR Repository
 ```bash
-# SSH into EC2
-ssh -i "key.pem" ec2-user@<EC2-PUBLIC-IP>
+aws ecr create-repository --repository-name job-tracker --region us-east-2
+```
 
-# Install dependencies
+### 2. Build and Push Docker Image
+```bash
+# Login to ECR
+aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.us-east-2.amazonaws.com
+
+# Build, tag, and push
+docker build -t job-tracker .
+docker tag job-tracker:latest <ACCOUNT_ID>.dkr.ecr.us-east-2.amazonaws.com/job-tracker:latest
+docker push <ACCOUNT_ID>.dkr.ecr.us-east-2.amazonaws.com/job-tracker:latest
+```
+
+### 3. Create ECS Cluster
+```bash
+aws ecs create-cluster --cluster-name job-tracker-cluster --region us-east-2
+```
+
+### 4. Set Up ECS (AWS Console)
+- Create IAM role `ecsTaskExecutionRole` with `AmazonECSTaskExecutionRolePolicy`
+- Create CloudWatch log group `/ecs/job-tracker`
+- Create task definition: Fargate, 0.25 vCPU, 512MB, container port 8000
+- Create service: 1 desired task, public subnet, auto-assign public IP, security group allowing port 8000
+
+### 5. Set Up CI/CD
+- Add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` as GitHub repository secrets
+- Push code to `main` branch — GitHub Actions handles the rest
+
+## Previous Deployment (EC2 + RDS)
+
+### EC2 Setup
+```bash
+ssh -i "key.pem" ec2-user@<EC2-PUBLIC-IP>
 sudo dnf install python3.11 python3.11-pip -y
 git clone https://github.com/enagbeme/job-tracker.git
 cd job-tracker
 pip3.11 install -r requirements.txt
 pip3.11 install psycopg2-binary
-
-# Set database connection
 export DATABASE_URL="postgresql://postgres:<PASSWORD>@<RDS-ENDPOINT>:5432/jobtracker?sslmode=require"
-
-# Test
 python3.11 -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-### 5. Set Up systemd Service
+### systemd Service
 ```bash
 sudo tee /etc/systemd/system/jobtracker.service << 'EOF'
 [Unit]
@@ -199,24 +254,27 @@ sudo systemctl start jobtracker
 | POST | `/delete/{id}` | Delete application |
 | POST | `/update-status/{id}` | Quick status update |
 | GET | `/export` | Download CSV export |
-| POST | `/fetch-jobs` | Fetch jobs from free APIs |
 | GET | `/api/applications` | JSON API: list applications |
 | GET | `/api/stats` | JSON API: dashboard statistics |
-| GET | `/api/fetch-jobs` | JSON API: fetch jobs (for cron) |
 
 ## Keyboard Shortcuts
 - `/` — Focus search bar
 - `n` — Navigate to Add Application
 
 ## What I Learned
-- EC2 instance setup, SSH access, and application deployment
-- RDS managed database creation and private VPC connectivity
+- Docker containerization with multi-layer caching for fast rebuilds
+- Amazon ECR as a private container registry
+- ECS Fargate for serverless container orchestration
+- GitHub Actions CI/CD pipeline with AWS integration
+- Task definitions, service configuration, and IAM roles for ECS
+- Evolution from manual EC2 deployment to fully automated container deployment
+- EC2 instance setup, SSH access, and systemd service management
+- RDS managed database with private VPC connectivity
 - Security group configuration for least-privilege network access
-- systemd service management for persistent application hosting
-- Full deployment pipeline from local development to production
-- Database abstraction with SQLAlchemy (SQLite locally, PostgreSQL in production)
 
 ## Built With
 - Python 3.11, FastAPI, SQLAlchemy, Jinja2
+- Docker, Amazon ECR, Amazon ECS Fargate
+- GitHub Actions (CI/CD)
 - PostgreSQL (AWS RDS), SQLite (local)
-- AWS EC2, RDS, VPC, Security Groups
+- AWS EC2, RDS, VPC, Security Groups, CloudWatch, IAM
