@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+{% set active = "dashboard" %}
+{% block title %}Dashboard | Job Tracker{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block topbar_actions %}
+<form action="/" method="get" class="search-box">
+    <input type="hidden" name="view" value="{{ view }}">
+    <input type="hidden" name="status_filter" value="{{ status_filter }}">
+    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" name="search" value="{{ search }}" placeholder="Search companies, roles..." class="search-input">
+</form>
+<a href="/add" class="btn-add">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New Application
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Row -->
+<div class="stats-row">
+    <div class="stat-card">
+        <div class="stat-card-inner stat-blue">
+            <div class="stat-icon-wrap">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <div class="stat-data">
+                <span class="stat-value" data-target="{{ stats.total }}">0</span>
+                <span class="stat-name">Total Applied</span>
+            </div>
+            <div class="stat-badge">All time</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-inner stat-amber">
+            <div class="stat-icon-wrap">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            </div>
+            <div class="stat-data">
+                <span class="stat-value" data-target="{{ stats.interviewing }}">0</span>
+                <span class="stat-name">Interviewing</span>
+            </div>
+            <div class="stat-badge">Active</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-inner stat-emerald">
+            <div class="stat-icon-wrap">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div class="stat-data">
+                <span class="stat-value" data-target="{{ stats.offers }}">0</span>
+                <span class="stat-name">Offers</span>
+            </div>
+            <div class="stat-badge">Received</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-inner stat-violet">
+            <div class="stat-icon-wrap">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
+            <div class="stat-data">
+                <span class="stat-value" data-target="{{ stats.response_rate }}" data-suffix="%">0%</span>
+                <span class="stat-name">Response Rate</span>
+            </div>
+            <div class="stat-badge">Overall</div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Grid -->
+<div class="dashboard-grid">
+    <!-- Status Breakdown with donut -->
+    <div class="card card-status">
+        <div class="card-head">
+            <h3>Status Breakdown</h3>
+        </div>
+        <div class="card-body">
+            {% if status_counts %}
+            <div class="status-chart-layout">
+                <div class="donut-wrap">
+                    <svg viewBox="0 0 36 36" class="donut-svg">
+                        {% set ns = namespace(offset=0) %}
+                        {% set colors = {'Saved': '#06b6d4', 'Applied': '#3b82f6', 'Phone Screen': '#eab308', 'Technical Interview': '#f97316', 'Final Interview': '#a855f7', 'Offer Received': '#22c55e', 'Accepted': '#10b981', 'Rejected': '#ef4444', 'Withdrawn': '#6b7280'} %}
+                        {% for status, count in status_counts.items() %}
+                        {% set pct = (count / stats.total * 100) %}
+                        <circle cx="18" cy="18" r="15.915" fill="none" stroke="{{ colors.get(status, '#6b7280') }}" stroke-width="3"
+                            stroke-dasharray="{{ pct }} {{ 100 - pct }}" stroke-dashoffset="{{ -ns.offset }}" stroke-linecap="round"
+                            class="donut-segment" style="--delay: {{ loop.index0 * 0.1 }}s"/>
+                        {% set ns.offset = ns.offset + pct %}
+                        {% endfor %}
+                    </svg>
+                    <div class="donut-center">
+                        <span class="donut-total">{{ stats.total }}</span>
+                        <span class="donut-label">Total</span>
+                    </div>
+                </div>
+                <div class="status-legend">
+                    {% for status, count in status_counts.items() %}
+                    <div class="legend-item">
+                        <span class="legend-dot" style="background: {{ colors.get(status, '#6b7280') }}"></span>
+                        <span class="legend-name">{{ status }}</span>
+                        <span class="legend-count">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-widget">No data yet</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Upcoming Interviews -->
+    <div class="card card-interviews">
+        <div class="card-head">
+            <h3>Upcoming Interviews</h3>
+            <span class="card-count">{{ upcoming | length }}</span>
+        </div>
+        <div class="card-body">
+            {% if upcoming %}
+            <div class="interview-list">
+                {% for app in upcoming %}
+                <div class="interview-item">
+                    <div class="interview-date-block">
+                        <span class="interview-month">{{ app.interview_date.strftime('%b') }}</span>
+                        <span class="interview-day">{{ app.interview_date.strftime('%d') }}</span>
+                    </div>
+                    <div class="interview-details">
+                        <span class="interview-company">{{ app.company }}</span>
+                        <span class="interview-role">{{ app.role }}</span>
+                    </div>
+                    <span class="priority-indicator priority-{{ app.priority | lower }}"></span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-widget">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <p>No upcoming interviews</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Weekly Activity -->
+    <div class="card card-activity">
+        <div class="card-head">
+            <h3>Weekly Activity</h3>
+        </div>
+        <div class="card-body">
+            <div class="activity-chart">
+                {% set max_count = weekly_activity | map(attribute='count') | max %}
+                {% for w in weekly_activity %}
+                <div class="activity-bar-group">
+                    <div class="activity-bar-track">
+                        <div class="activity-bar" style="height: {{ ((w.count / max_count) * 100) | round if max_count > 0 else 0 }}%">
+                            <span class="activity-tooltip">{{ w.count }}</span>
+                        </div>
+                    </div>
+                    <span class="activity-label">{{ w.label[:3] }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Applications Section -->
+<div class="applications-section">
+    <div class="section-header">
+        <div class="section-left">
+            <h2>Applications</h2>
+            <div class="view-switcher">
+                <a href="/?view=table&search={{ search }}&status_filter={{ status_filter }}" class="view-opt {% if view == 'table' %}active{% endif %}" title="Table">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                </a>
+                <a href="/?view=kanban&search={{ search }}&status_filter={{ status_filter }}" class="view-opt {% if view == 'kanban' %}active{% endif %}" title="Kanban">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                </a>
+            </div>
+        </div>
+        <div class="filter-bar">
+            <a href="/?view={{ view }}&search={{ search }}&status_filter=all" class="filter-chip {% if status_filter == 'all' %}active{% endif %}">All <span>{{ stats.total }}</span></a>
+            <a href="/?view={{ view }}&search={{ search }}&status_filter=Saved" class="filter-chip saved-chip {% if status_filter == 'Saved' %}active{% endif %}">Saved <span>{{ stats.saved }}</span></a>
+            <a href="/?view={{ view }}&search={{ search }}&status_filter=Applied" class="filter-chip {% if status_filter == 'Applied' %}active{% endif %}">Applied <span>{{ stats.applied }}</span></a>
+            <a href="/?view={{ view }}&search={{ search }}&status_filter=interviewing" class="filter-chip {% if status_filter == 'interviewing' %}active{% endif %}">Interviews <span>{{ stats.interviewing }}</span></a>
+            <a href="/?view={{ view }}&search={{ search }}&status_filter=Offer Received" class="filter-chip {% if status_filter == 'Offer Received' %}active{% endif %}">Offers <span>{{ stats.offers }}</span></a>
+            <a href="/?view={{ view }}&search={{ search }}&status_filter=Rejected" class="filter-chip {% if status_filter == 'Rejected' %}active{% endif %}">Rejected <span>{{ stats.rejected }}</span></a>
+        </div>
+    </div>
+
+    {% if view == 'kanban' %}
+    <!-- Kanban Board -->
+    <div class="kanban-scroll">
+        <div class="kanban-board">
+            {% for status in ["Saved", "Applied", "Phone Screen", "Technical Interview", "Final Interview", "Offer Received", "Accepted", "Rejected"] %}
+            {% set colors = {'Saved': '#06b6d4', 'Applied': '#3b82f6', 'Phone Screen': '#eab308', 'Technical Interview': '#f97316', 'Final Interview': '#a855f7', 'Offer Received': '#22c55e', 'Accepted': '#10b981', 'Rejected': '#ef4444'} %}
+            <div class="kanban-col">
+                <div class="kanban-col-head">
+                    <div class="kanban-col-indicator" style="background: {{ colors.get(status, '#6b7280') }}"></div>
+                    <span class="kanban-col-title">{{ status }}</span>
+                    <span class="kanban-col-count">{{ kanban[status] | length }}</span>
+                </div>
+                <div class="kanban-col-body">
+                    {% for app in kanban[status] %}
+                    <div class="k-card">
+                        <div class="k-card-top">
+                            <span class="k-company">{{ app.company }}</span>
+                            <span class="priority-indicator priority-{{ app.priority | lower }}"></span>
+                        </div>
+                        <span class="k-role">{{ app.role }}</span>
+                        {% if app.location %}
+                        <div class="k-meta">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            {{ app.location }}
+                        </div>
+                        {% endif %}
+                        {% if app.salary_min %}
+                        <div class="k-meta">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                            ${{ "{:,.0f}".format(app.salary_min) }}{% if app.salary_max %} - ${{ "{:,.0f}".format(app.salary_max) }}{% endif %}
+                        </div>
+                        {% endif %}
+                        {% if app.interview_date %}
+                        <div class="k-meta k-interview-date">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+                            {{ app.interview_date.strftime('%b %d, %Y') }}
+                        </div>
+                        {% endif %}
+                        <div class="k-actions">
+                            <a href="/edit/{{ app.id }}" class="k-btn k-edit">Edit</a>
+                            <form action="/delete/{{ app.id }}" method="post" onsubmit="return confirm('Delete?')" style="display:inline">
+                                <button type="submit" class="k-btn k-delete">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not kanban[status] %}
+                    <div class="k-empty">No applications</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Table View -->
+    {% if applications %}
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Company</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Type</th>
+                    <th>Location</th>
+                    <th>Salary</th>
+                    <th>Applied</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in applications %}
+                <tr>
+                    <td>
+                        <div class="cell-company">
+                            <div class="avatar" style="background: {{ ['linear-gradient(135deg,#6366f1,#a855f7)','linear-gradient(135deg,#3b82f6,#06b6d4)','linear-gradient(135deg,#f97316,#eab308)','linear-gradient(135deg,#22c55e,#06b6d4)','linear-gradient(135deg,#ef4444,#f97316)','linear-gradient(135deg,#8b5cf6,#ec4899)'][loop.index0 % 6] }}">{{ app.company[0] }}</div>
+                            <div>
+                                <span class="cell-name">{{ app.company }}</span>
+                                {% if app.url %}<a href="{{ app.url }}" target="_blank" class="cell-link">View posting</a>{% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="cell-role">{{ app.role }}</span></td>
+                    <td>
+                        <form action="/update-status/{{ app.id }}" method="post" class="inline-form">
+                            <select name="status" class="status-select status-{{ app.status | lower | replace(' ', '-') }}" onchange="this.form.submit()">
+                                {% for s in statuses %}<option value="{{ s }}" {% if s == app.status %}selected{% endif %}>{{ s }}</option>{% endfor %}
+                            </select>
+                        </form>
+                    </td>
+                    <td><span class="priority-tag priority-{{ app.priority | lower }}">{{ app.priority }}</span></td>
+                    <td><span class="type-tag">{{ app.job_type }}</span></td>
+                    <td class="cell-dim">{{ app.location or "—" }}</td>
+                    <td class="cell-dim">
+                        {% if app.salary_min and app.salary_max %}
+                            ${{ "{:,.0f}".format(app.salary_min) }} - ${{ "{:,.0f}".format(app.salary_max) }}
+                        {% elif app.salary_min %}
+                            ${{ "{:,.0f}".format(app.salary_min) }}+
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="cell-dim">{% if app.applied_date %}{{ app.applied_date.strftime('%b %d') }}{% else %}—{% endif %}</td>
+                    <td>
+                        <div class="row-actions">
+                            <a href="/edit/{{ app.id }}" class="row-btn" title="Edit">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </a>
+                            <form action="/delete/{{ app.id }}" method="post" onsubmit="return confirm('Delete this application?')" style="display:inline">
+                                <button type="submit" class="row-btn row-btn-danger" title="Delete">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+        <h3>No applications found</h3>
+        <p>{% if search %}No results for "{{ search }}". Try a different search.{% else %}Start tracking your job search by adding your first application.{% endif %}</p>
+        <a href="/add" class="btn-add">+ Add Application</a>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

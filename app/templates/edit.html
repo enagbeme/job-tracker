@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% set active = "" %}
+{% block title %}Edit: {{ app.company }} | Job Tracker{% endblock %}
+{% block page_title %}Edit Application{% endblock %}
+
+{% block topbar_actions %}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <div class="form-header-icon edit-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </div>
+            <div>
+                <h2>Edit Application</h2>
+                <p>{{ app.company }} &mdash; {{ app.role }}</p>
+            </div>
+        </div>
+        <form action="/edit/{{ app.id }}" method="post" class="app-form">
+            <div class="form-section-label">Basic Info</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="company">Company *</label>
+                    <input type="text" id="company" name="company" value="{{ app.company }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="role">Role *</label>
+                    <input type="text" id="role" name="role" value="{{ app.role }}" required>
+                </div>
+            </div>
+            <div class="form-row form-row-3">
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        {% for s in statuses %}<option value="{{ s }}" {% if s == app.status %}selected{% endif %}>{{ s }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="job_type">Job Type</label>
+                    <select id="job_type" name="job_type">
+                        {% for t in job_types %}<option value="{{ t }}" {% if t == app.job_type %}selected{% endif %}>{{ t }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="priority">Priority</label>
+                    <select id="priority" name="priority">
+                        {% for p in priorities %}<option value="{{ p }}" {% if p == app.priority %}selected{% endif %}>{{ p }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-divider"></div>
+            <div class="form-section-label">Details</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="location">Location</label>
+                    <input type="text" id="location" name="location" value="{{ app.location or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="url">Job Posting URL</label>
+                    <input type="url" id="url" name="url" value="{{ app.url or '' }}">
+                </div>
+            </div>
+            <div class="form-row form-row-3">
+                <div class="form-group">
+                    <label for="salary_min">Salary Min ($)</label>
+                    <input type="number" id="salary_min" name="salary_min" value="{{ app.salary_min or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="salary_max">Salary Max ($)</label>
+                    <input type="number" id="salary_max" name="salary_max" value="{{ app.salary_max or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="interview_date">Interview Date</label>
+                    <input type="datetime-local" id="interview_date" name="interview_date" value="{{ app.interview_date.strftime('%Y-%m-%dT%H:%M') if app.interview_date else '' }}">
+                </div>
+            </div>
+
+            <div class="form-divider"></div>
+            <div class="form-section-label">Contact</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="contact_name">Contact Name</label>
+                    <input type="text" id="contact_name" name="contact_name" value="{{ app.contact_name or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="contact_email">Contact Email</label>
+                    <input type="email" id="contact_email" name="contact_email" value="{{ app.contact_email or '' }}">
+                </div>
+            </div>
+            <div class="form-group full-width">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="4">{{ app.notes or '' }}</textarea>
+            </div>
+            <div class="form-actions">
+                <a href="/" class="btn-cancel">Cancel</a>
+                <button type="submit" class="btn-submit">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    Update Application
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

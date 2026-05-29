@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% set active = "add" %}
+{% block title %}Add Application | Job Tracker{% endblock %}
+{% block page_title %}Add Application{% endblock %}
+
+{% block topbar_actions %}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <div class="form-header-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            </div>
+            <div>
+                <h2>New Application</h2>
+                <p>Track a new job you've applied to</p>
+            </div>
+        </div>
+        <form action="/add" method="post" class="app-form">
+            <div class="form-section-label">Basic Info</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="company">Company *</label>
+                    <input type="text" id="company" name="company" placeholder="e.g. Amazon, Google" required>
+                </div>
+                <div class="form-group">
+                    <label for="role">Role *</label>
+                    <input type="text" id="role" name="role" placeholder="e.g. Cloud Engineer" required>
+                </div>
+            </div>
+            <div class="form-row form-row-3">
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        {% for s in statuses %}<option value="{{ s }}" {% if s == "Applied" %}selected{% endif %}>{{ s }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="job_type">Job Type</label>
+                    <select id="job_type" name="job_type">
+                        {% for t in job_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="priority">Priority</label>
+                    <select id="priority" name="priority">
+                        {% for p in priorities %}<option value="{{ p }}" {% if p == "Medium" %}selected{% endif %}>{{ p }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-divider"></div>
+            <div class="form-section-label">Details</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="location">Location</label>
+                    <input type="text" id="location" name="location" placeholder="e.g. Remote, New York">
+                </div>
+                <div class="form-group">
+                    <label for="url">Job Posting URL</label>
+                    <input type="url" id="url" name="url" placeholder="https://...">
+                </div>
+            </div>
+            <div class="form-row form-row-3">
+                <div class="form-group">
+                    <label for="salary_min">Salary Min ($)</label>
+                    <input type="number" id="salary_min" name="salary_min" placeholder="80,000">
+                </div>
+                <div class="form-group">
+                    <label for="salary_max">Salary Max ($)</label>
+                    <input type="number" id="salary_max" name="salary_max" placeholder="120,000">
+                </div>
+                <div class="form-group">
+                    <label for="interview_date">Interview Date</label>
+                    <input type="datetime-local" id="interview_date" name="interview_date">
+                </div>
+            </div>
+
+            <div class="form-divider"></div>
+            <div class="form-section-label">Contact</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="contact_name">Contact Name</label>
+                    <input type="text" id="contact_name" name="contact_name" placeholder="Recruiter name">
+                </div>
+                <div class="form-group">
+                    <label for="contact_email">Contact Email</label>
+                    <input type="email" id="contact_email" name="contact_email" placeholder="recruiter@company.com">
+                </div>
+            </div>
+            <div class="form-group full-width">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="4" placeholder="Interview prep, requirements, referral info..."></textarea>
+            </div>
+            <div class="form-actions">
+                <a href="/" class="btn-cancel">Cancel</a>
+                <button type="submit" class="btn-submit">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    Save Application
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
